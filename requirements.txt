@@ -1,0 +1,7 @@
+Flask
+pymongo
+flask-cors
+pydantic
+requests
+mongomock
+flask_sqlalchemy
