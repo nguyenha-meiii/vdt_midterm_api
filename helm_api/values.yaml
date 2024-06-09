@@ -1,0 +1,12 @@
+appName: api
+
+port: 80
+
+configmap:
+  name: api-configmap-v1
+  data:
+    CUSTOM_HEADER: 'This app was deployed with helm!'
+
+image:
+  name: hantmei/vdt_midterm-python_server
+  tag: latest
