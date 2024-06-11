@@ -1,9 +1,10 @@
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import logging
+from flask import Response
+import json
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -12,34 +13,83 @@ cors = CORS(app, resource={
         "origins":"*"
     }
 })
+
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 
-# MongoDB configuration
-client = MongoClient("mongodb://mongo_db:27017/")
-db = client["student_db"]
-students_collection = db["students"]
+# MongoDB configuration function
+def get_db():
+    client = MongoClient(host='test_mongodb',
+                         port=27017, 
+                         username='root', 
+                         password='pass',
+                         authSource="admin")
+    db = client["student_db"]
+    return db
 
-# Routes
+
+
+# Routes 
+
+@app.route('/')
+def ping_server():
+    db = get_db()
+    students_collection = db.student_tb
+    #lỗi không connect được vs database
+    students = list(students_collection.find({}, {'_id': 1,'no': 1, 'fullName': 1, 'doB': 1, 'gender': 1, 'school': 1}))
+    for student in students:
+        student['_id'] = str(student['_id'])
+        #lỗi không connect được vs database
+    print("Hello123")     #ko in được 2 dòng này
+    print(students_collection)   #ko in được 2 dòng này
+    return "Welcome to student list."
 
 # Get all students
+# @app.route('/api/students', methods=['GET'])
+# def get_students():
+#     try:
+#         db = get_db()
+#         students_collection = db.student_tb
+#         students = list(students_collection.find({}, {'_id': 1,'no': 1, 'fullName': 1, 'doB': 1, 'gender': 1, 'school': 1}))
+#         for student in students:
+#             student['_id'] = str(student['_id'])  # Convert ObjectId to string
+#         return jsonify(students), 200
+#     except Exception as e:
+#         logging.error(f"Error fetching students: {e}")
+#         return jsonify({'message': 'Internal server error'}), 500
+
 @app.route('/api/students', methods=['GET'])
 def get_students():
     try:
-        students = list(students_collection.find({}, {'_id': 1,'no': 1, 'fullName': 1, 'doB': 1, 'gender': 1, 'school': 1, 'major': 1}))
+        db = get_db()
+        students_collection = db.student_tb
+        students = list(students_collection.find({}, {'_id': 1,'no': 1, 'fullName': 1, 'doB': 1, 'gender': 1, 'school': 1}))
         for student in students:
             student['_id'] = str(student['_id'])  # Convert ObjectId to string
-        return jsonify(students), 200
+
+            # Decode Unicode escape sequences for Vietnamese characters
+            student['fullName'] = student['fullName']
+            student['school'] = student['school']
+            student['gender'] = student['gender']
+
+        # return jsonify(students), 200, {'Content-Type': 'application/json'}
+        formatted_response = '[' + ',\n'.join(json.dumps(student, ensure_ascii=False) for student in students) + ']'
+        
+        # Create a Response object with the formatted JSON and appropriate content type
+        response = Response(formatted_response, content_type='application/json; charset=utf-8')
+        return response
     except Exception as e:
         logging.error(f"Error fetching students: {e}")
         return jsonify({'message': 'Internal server error'}), 500
+
 
 # Create a new student
 @app.route('/api/students', methods=['POST'])
 def create_student():
     try:
+        db = get_db()
+        students_collection = db.student_tb
         data = request.json
-        print(data)
         result = students_collection.insert_one(data)
         return jsonify({'message': 'Student created successfully', 'id': str(result.inserted_id)}), 200
     except Exception as e:
@@ -50,7 +100,9 @@ def create_student():
 @app.route('/api/students/<string:id>', methods=['GET'])
 def get_student(id):
     try:
-        student = students_collection.find_one({'_id': ObjectId(id)}, {'_id': 1, 'fullName': 1, 'doB': 1, 'gender': 1, 'school': 1, 'major': 1})
+        db = get_db()
+        students_collection = db.student_tb
+        student = students_collection.find_one({'_id': ObjectId(id)}, {'_id': 1, 'fullName': 1, 'doB': 1, 'gender': 1, 'school': 1})
         if student:
             student['_id'] = str(student['_id'])  # Convert ObjectId to string
             return jsonify(student), 200
@@ -64,6 +116,8 @@ def get_student(id):
 @app.route('/api/students/<string:id>', methods=['PUT'])
 def update_student(id):
     try:
+        db = get_db()
+        students_collection = db.student_tb
         data = request.json
         # Remove the _id field from the update data to prevent modifying the immutable _id field
         data.pop('_id', None)
@@ -80,6 +134,8 @@ def update_student(id):
 @app.route('/api/students/<string:id>', methods=['DELETE'])
 def delete_student(id):
     try:
+        db = get_db()
+        students_collection = db.student_tb
         result = students_collection.delete_one({'_id': ObjectId(id)})
         if result.deleted_count == 1:
             return jsonify({'message': 'Student deleted successfully'}), 200
@@ -91,4 +147,4 @@ def delete_student(id):
 
 # Run the Flask app
 if __name__ == '__main__':
-    app.run(host='0.0.0.0',debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)
