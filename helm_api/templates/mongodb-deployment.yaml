@@ -26,8 +26,7 @@ spec:
               mountPath: /data/db
           env:
             - name: MONGO_URI
-              value: "mongodb+srv://root:hello123@vdt.2w2zlck.mongodb.net/?retryWrites=true&w=majority&appName=vdt"
-              # valueFrom:
-              #   secretKeyRef:
-              #     name: mongodb-secret
-              #     key: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secret
+                  key: MONGO_URI
