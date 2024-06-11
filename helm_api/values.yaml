@@ -1,15 +1,11 @@
-appName: api
+mongodb:
+  image: mongo:latest
+  storage:
+    size: 1Gi
 
-# port: 5001
-
-configmap:
-  name: api-configmap-v1
-  data:
-    CUSTOM_HEADER: 'This app was deployed with helm!'
-
-image:
-  name: hantmei/vdt_api
-  tag: latest
-
-service:
-  nodePort: 30002
+api:
+  image:
+    repository: hantmei/vdt_api
+    tag: latest
+  service:
+    port: 5001
