@@ -8,4 +8,4 @@ api:
     repository: hantmei/vdt_api
     tag: latest
   service:
-    port: 5001
+    nodePort: 30080
