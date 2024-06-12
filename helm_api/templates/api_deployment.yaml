@@ -17,11 +17,9 @@ spec:
         image: hantmei/vdt_api
         ports:
         - containerPort: 5001
-        env:
-        - name: MONGODB_URI
-          value: "mongodb+srv://root:hello123@vdt.2w2zlck.mongodb.net/?retryWrites=true&w=majority&appName=vdt"
-        # - secretRef:
-        #     name: mongodb-secret
+        envFrom:
+        - secretRef:
+            name: mongodb-secret
         resources:
           requests:
             memory: "16Mi" 
