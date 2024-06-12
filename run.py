@@ -1,10 +1,14 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import logging
-from flask import Response
 import json
+import os
+
+# Load environment variables
+MONGO_URI = os.getenv('DATABASE_PORT', 'mongodb+srv://root:hello123@vdt.2w2zlck.mongodb.net/?retryWrites=true&w=majority&appName=vdt')
+JWT_SECRET = os.getenv('JWT_SECRET', 'VDT2024')
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -19,130 +23,95 @@ logging.basicConfig(level=logging.INFO)
 
 # MongoDB configuration function
 def get_db():
-    client = MongoClient(host='test_mongodb',
-                         port=27017, 
-                         username='root', 
-                         password='pass',
-                         authSource="admin")
-    db = client["student_db"]
+    client = MongoClient(MONGO_URI)
+    db = client["test"]
     return db
-
-
 
 # Routes 
 
 @app.route('/')
 def ping_server():
     db = get_db()
-    students_collection = db.student_tb
-    #lỗi không connect được vs database
-    students = list(students_collection.find({}, {'_id': 1,'no': 1, 'fullName': 1, 'doB': 1, 'gender': 1, 'school': 1}))
-    for student in students:
-        student['_id'] = str(student['_id'])
-        #lỗi không connect được vs database
-    print("Hello123")     #ko in được 2 dòng này
-    print(students_collection)   #ko in được 2 dòng này
-    return "Welcome to student list."
+    trainees_collection = db.trainees
+    # lỗi không connect được vs database
+    trainees = list(trainees_collection.find({}, {'_id': 1, 'name': 1, 'email': 1, 'gender': 1, 'school': 1}))
+    for trainee in trainees:
+        trainee['_id'] = str(trainee['_id'])
+    logging.info("Hello123")  # sử dụng logging thay vì print
+    logging.info(trainees_collection)  # sử dụng logging thay vì print
+    return "Welcome to trainees list."
 
-# Get all students
-# @app.route('/api/students', methods=['GET'])
-# def get_students():
-#     try:
-#         db = get_db()
-#         students_collection = db.student_tb
-#         students = list(students_collection.find({}, {'_id': 1,'no': 1, 'fullName': 1, 'doB': 1, 'gender': 1, 'school': 1}))
-#         for student in students:
-#             student['_id'] = str(student['_id'])  # Convert ObjectId to string
-#         return jsonify(students), 200
-#     except Exception as e:
-#         logging.error(f"Error fetching students: {e}")
-#         return jsonify({'message': 'Internal server error'}), 500
-
-@app.route('/api/students', methods=['GET'])
-def get_students():
+@app.route('/api/trainees', methods=['GET'])
+def get_trainees():
     try:
         db = get_db()
-        students_collection = db.student_tb
-        students = list(students_collection.find({}, {'_id': 1,'no': 1, 'fullName': 1, 'doB': 1, 'gender': 1, 'school': 1}))
-        for student in students:
-            student['_id'] = str(student['_id'])  # Convert ObjectId to string
+        trainees_collection = db.trainees
+        trainees = list(trainees_collection.find({}, {'_id': 1, 'name': 1, 'email': 1, 'gender': 1, 'school': 1}))
+        for trainee in trainees:
+            trainee['_id'] = str(trainee['_id'])  # Convert ObjectId to string
 
-            # Decode Unicode escape sequences for Vietnamese characters
-            student['fullName'] = student['fullName']
-            student['school'] = student['school']
-            student['gender'] = student['gender']
-
-        # return jsonify(students), 200, {'Content-Type': 'application/json'}
-        formatted_response = '[' + ',\n'.join(json.dumps(student, ensure_ascii=False) for student in students) + ']'
-        
-        # Create a Response object with the formatted JSON and appropriate content type
+        formatted_response = '[' + ',\n'.join(json.dumps(trainee, ensure_ascii=False) for trainee in trainees) + ']'
         response = Response(formatted_response, content_type='application/json; charset=utf-8')
         return response
     except Exception as e:
-        logging.error(f"Error fetching students: {e}")
+        logging.error(f"Error fetching trainees: {e}")
         return jsonify({'message': 'Internal server error'}), 500
 
-
-# Create a new student
-@app.route('/api/students', methods=['POST'])
-def create_student():
+@app.route('/api/trainees', methods=['POST'])
+def create_trainee():
     try:
         db = get_db()
-        students_collection = db.student_tb
+        trainees_collection = db.trainees
         data = request.json
-        result = students_collection.insert_one(data)
-        return jsonify({'message': 'Student created successfully', 'id': str(result.inserted_id)}), 200
+        result = trainees_collection.insert_one(data)
+        return jsonify({'message': 'Trainee created successfully', 'id': str(result.inserted_id)}), 200
     except Exception as e:
-        logging.error(f"Error creating student: {e}")
+        logging.error(f"Error creating trainee: {e}")
         return jsonify({'message': 'Internal server error'}), 500
 
-# Get a student by ID
-@app.route('/api/students/<string:id>', methods=['GET'])
-def get_student(id):
+@app.route('/api/trainees/<string:id>', methods=['GET'])
+def get_trainee(id):
     try:
         db = get_db()
-        students_collection = db.student_tb
-        student = students_collection.find_one({'_id': ObjectId(id)}, {'_id': 1, 'fullName': 1, 'doB': 1, 'gender': 1, 'school': 1})
-        if student:
-            student['_id'] = str(student['_id'])  # Convert ObjectId to string
-            return jsonify(student), 200
+        trainees_collection = db.trainees
+        trainee = trainees_collection.find_one({'_id': ObjectId(id)}, {'_id': 1, 'name': 1, 'email': 1, 'gender': 1, 'school': 1})
+        if trainee:
+            trainee['_id'] = str(trainee['_id'])  # Convert ObjectId to string
+            return jsonify(trainee), 200
         else:
-            return jsonify({'message': 'Student not found'}), 404
+            return jsonify({'message': 'Trainee not found'}), 404
     except Exception as e:
-        logging.error(f"Error fetching student with ID {id}: {e}")
+        logging.error(f"Error fetching trainee with ID {id}: {e}")
         return jsonify({'message': 'Internal server error'}), 500
 
-# Update a student by ID
-@app.route('/api/students/<string:id>', methods=['PUT'])
-def update_student(id):
+@app.route('/api/trainees/<string:id>', methods=['PUT'])
+def update_trainee(id):
     try:
         db = get_db()
-        students_collection = db.student_tb
+        trainees_collection = db.trainees
         data = request.json
-        # Remove the _id field from the update data to prevent modifying the immutable _id field
         data.pop('_id', None)
-        result = students_collection.update_one({'_id': ObjectId(id)}, {'$set': data})
+        result = trainees_collection.update_one({'_id': ObjectId(id)}, {'$set': data})
         if result.modified_count == 1:
-            return jsonify({'message': 'Student updated successfully'}), 200
+            return jsonify({'message': 'Trainee updated successfully'}), 200
         else:
-            return jsonify({'message': 'Student not found'}), 404
+            return jsonify({'message': 'Trainee not found'}), 404
     except Exception as e:
-        logging.error(f"Error updating student with ID {id}: {e}")
+        logging.error(f"Error updating trainee with ID {id}: {e}")
         return jsonify({'message': 'Internal server error'}), 500
 
-# Delete a student by ID
-@app.route('/api/students/<string:id>', methods=['DELETE'])
-def delete_student(id):
+@app.route('/api/trainees/<string:id>', methods=['DELETE'])
+def delete_trainee(id):
     try:
         db = get_db()
-        students_collection = db.student_tb
-        result = students_collection.delete_one({'_id': ObjectId(id)})
+        trainees_collection = db.trainees
+        result = trainees_collection.delete_one({'_id': ObjectId(id)})
         if result.deleted_count == 1:
-            return jsonify({'message': 'Student deleted successfully'}), 200
+            return jsonify({'message': 'Trainee deleted successfully'}), 200
         else:
-            return jsonify({'message': 'Student not found'}), 404
+            return jsonify({'message': 'Trainee not found'}), 404
     except Exception as e:
-        logging.error(f"Error deleting student with ID {id}: {e}")
+        logging.error(f"Error deleting trainee with ID {id}: {e}")
         return jsonify({'message': 'Internal server error'}), 500
 
 # Run the Flask app
