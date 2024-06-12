@@ -1,11 +1,8 @@
-mongodb:
-  image: mongo:latest
-  storage:
-    size: 1Gi
+appName: api
 
-api:
-  image:
-    repository: hantmei/vdt_api
-    tag: latest
-  service:
-    nodePort: 30080
+image:
+  repository: hantmei/test_api
+  tag: latest
+
+service:
+  nodePort: 30081
