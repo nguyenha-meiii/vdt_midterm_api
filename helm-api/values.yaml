@@ -1,7 +1,7 @@
 appName: api
 
 image:
-  repository: hantmei/test_api
+  repository: hantmei/api_test
   tag: latest
 
 service:
