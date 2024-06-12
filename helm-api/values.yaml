@@ -5,4 +5,4 @@ image:
   tag: latest
 
 service:
-  nodePort: 30081
+  nodePort: 30100
