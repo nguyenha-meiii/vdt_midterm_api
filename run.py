@@ -1,151 +1,120 @@
-from flask import Flask, jsonify, request, Response
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import logging
+from flask import Response
 import json
 import os
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 
-MONGO_URI = os.getenv('DATABASE_PORT', 'mongodb+srv://root:hello123@vdt.2w2zlck.mongodb.net/?retryWrites=true&w=majority&appName=vdt')
-JWT_SECRET = os.getenv('JWT_SECRET', 'VDT2024')
-
-
+# Initialize Flask app
 app = Flask(__name__)
 cors = CORS(app, resource={
-    r"/*": {
-        "origins": "*"
+    r"/*":{
+        "origins":"*"
     }
 })
 
-
+# Set up logging
 logging.basicConfig(level=logging.INFO)
 
-
-def rate_limit_exceeded(e):
-    return jsonify({"error": "Too many requests"}), 409
-
-
-limiter = Limiter(
-    key_func=get_remote_address,
-    default_limits=["10 per minute"],
-    storage_uri="memory://"
-)
-
-
-app.config['RATELIMIT_HEADERS_ENABLED'] = True
-app.register_error_handler(429, rate_limit_exceeded)
-
-
-limiter.init_app(app)
-
-
+# MongoDB configuration function
 def get_db():
-    client = MongoClient(MONGO_URI)
-    db = client["test"]
+    client = MongoClient(os.getenv('DATABASE_PORT'))
+    db = client["student_db"]
     return db
 
+# Routes 
 
-# Routes
 @app.route('/')
-@limiter.limit("10 per minute")
 def ping_server():
     db = get_db()
-    trainees_collection = db.trainees
-    trainees = list(trainees_collection.find({}, {'_id': 1, 'name': 1, 'email': 1, 'gender': 1, 'school': 1}))
-    for trainee in trainees:
-        trainee['_id'] = str(trainee['_id'])
-    logging.info("Hello123")
-    logging.info(trainees_collection)
-    return "Welcome to trainees list."
+    students_collection = db.student_tb
+    students = list(students_collection.find({}, {'_id': 1,'no': 1, 'fullName': 1, 'doB': 1, 'gender': 1, 'school': 1}))
+    for student in students:
+        student['_id'] = str(student['_id'])
+    print("Hello123")
+    print(students_collection)
+    return "Welcome to student list."
 
-
-@app.route('/api/trainees', methods=['GET'])
-@limiter.limit("10 per minute")
-def get_trainees():
+@app.route('/api/students', methods=['GET'])
+def get_students():
     try:
         db = get_db()
-        trainees_collection = db.trainees
-        trainees = list(trainees_collection.find({}, {'_id': 1, 'name': 1, 'email': 1, 'gender': 1, 'school': 1}))
-        for trainee in trainees:
-            trainee['_id'] = str(trainee['_id'])  # Convert ObjectId to string
-
-
-        formatted_response = '[' + ',\n'.join(json.dumps(trainee, ensure_ascii=False) for trainee in trainees) + ']'
+        students_collection = db.student_tb
+        students = list(students_collection.find({}, {'_id': 1,'no': 1, 'fullName': 1, 'doB': 1, 'gender': 1, 'school': 1}))
+        for student in students:
+            student['_id'] = str(student['_id'])
+            student['fullName'] = student['fullName']
+            student['school'] = student['school']
+            student['gender'] = student['gender']
+        formatted_response = '[' + ',\n'.join(json.dumps(student, ensure_ascii=False) for student in students) + ']'
         response = Response(formatted_response, content_type='application/json; charset=utf-8')
         return response
     except Exception as e:
-        logging.error(f"Error fetching trainees: {e}")
+        logging.error(f"Error fetching students: {e}")
         return jsonify({'message': 'Internal server error'}), 500
 
-
-@app.route('/api/trainees', methods=['POST'])
-@limiter.limit("10 per minute")
-def create_trainee():
+@app.route('/api/students', methods=['POST'])
+def create_student():
     try:
         db = get_db()
-        trainees_collection = db.trainees
+        students_collection = db.student_tb
         data = request.json
-        result = trainees_collection.insert_one(data)
-        return jsonify({'message': 'Trainee created successfully', 'id': str(result.inserted_id)}), 200
+        result = students_collection.insert_one(data)
+        return jsonify({'message': 'Student created successfully', 'id': str(result.inserted_id)}), 200
     except Exception as e:
-        logging.error(f"Error creating trainee: {e}")
+        logging.error(f"Error creating student: {e}")
         return jsonify({'message': 'Internal server error'}), 500
 
-
-@app.route('/api/trainees/<string:id>', methods=['GET'])
-@limiter.limit("10 per minute")
-def get_trainee(id):
+@app.route('/api/students/<string:id>', methods=['GET'])
+def get_student(id):
     try:
         db = get_db()
-        trainees_collection = db.trainees
-        trainee = trainees_collection.find_one({'_id': ObjectId(id)}, {'_id': 1, 'name': 1, 'email': 1, 'gender': 1, 'school': 1})
-        if trainee:
-            trainee['_id'] = str(trainee['_id'])  # Convert ObjectId to string
-            return jsonify(trainee), 200
+        students_collection = db.student_tb
+        student = students_collection.find_one({'_id': ObjectId(id)}, {'_id': 1, 'fullName': 1, 'doB': 1, 'gender': 1, 'school': 1})
+        if student:
+            student['_id'] = str(student['_id'])
+            return jsonify(student), 200
         else:
-            return jsonify({'message': 'Trainee not found'}), 404
+            return jsonify({'message': 'Student not found'}), 404
     except Exception as e:
-        logging.error(f"Error fetching trainee with ID {id}: {e}")
+        logging.error(f"Error fetching student with ID {id}: {e}")
         return jsonify({'message': 'Internal server error'}), 500
 
-
-@app.route('/api/trainees/<string:id>', methods=['PUT'])
-@limiter.limit("10 per minute")
-def update_trainee(id):
+@app.route('/api/students/<string:id>', methods=['PUT'])
+def update_student(id):
     try:
         db = get_db()
-        trainees_collection = db.trainees
+        students_collection = db.student_tb
         data = request.json
         data.pop('_id', None)
-        result = trainees_collection.update_one({'_id': ObjectId(id)}, {'$set': data})
+        result = students_collection.update_one({'_id': ObjectId(id)}, {'$set': data})
         if result.modified_count == 1:
-            return jsonify({'message': 'Trainee updated successfully'}), 200
+            return jsonify({'message': 'Student updated successfully'}), 200
         else:
-            return jsonify({'message': 'Trainee not found'}), 404
+            return jsonify({'message': 'Student not found'}), 404
     except Exception as e:
-        logging.error(f"Error updating trainee with ID {id}: {e}")
+        logging.error(f"Error updating student with ID {id}: {e}")
         return jsonify({'message': 'Internal server error'}), 500
 
-
-@app.route('/api/trainees/<string:id>', methods=['DELETE'])
-@limiter.limit("10 per minute")
-def delete_trainee(id):
+@app.route('/api/students/<string:id>', methods=['DELETE'])
+def delete_student(id):
     try:
         db = get_db()
-        trainees_collection = db.trainees
-        result = trainees_collection.delete_one({'_id': ObjectId(id)})
+        students_collection = db.student_tb
+        result = students_collection.delete_one({'_id': ObjectId(id)})
         if result.deleted_count == 1:
-            return jsonify({'message': 'Trainee deleted successfully'}), 200
+            return jsonify({'message': 'Student deleted successfully'}), 200
         else:
-            return jsonify({'message': 'Trainee not found'}), 404
+            return jsonify({'message': 'Student not found'}), 404
     except Exception as e:
-        logging.error(f"Error deleting trainee with ID {id}: {e}")
+        logging.error(f"Error deleting student with ID {id}: {e}")
         return jsonify({'message': 'Internal server error'}), 500
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
-
