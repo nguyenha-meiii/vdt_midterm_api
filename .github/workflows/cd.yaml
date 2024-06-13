@@ -44,7 +44,7 @@ jobs:
       - name: Commit and push changes
         run: |
           git clone https://user:$GITHUB_TOKEN@github.com/nguyenha-meiii/api_config
-          cd api_values
+          cd api_config
  
           git config --global user.name 'GitHub Actions'
           git config --global user.email 'nguyenthuhat1k60@gmail.com'
