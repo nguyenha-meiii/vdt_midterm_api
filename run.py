@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Response
+from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -9,12 +9,10 @@ import json
 import os
 
 
-# Load environment variables
 MONGO_URI = os.getenv('DATABASE_PORT', 'mongodb+srv://root:hello123@vdt.2w2zlck.mongodb.net/?retryWrites=true&w=majority&appName=vdt')
 JWT_SECRET = os.getenv('JWT_SECRET', 'VDT2024')
 
 
-# Initialize Flask app
 app = Flask(__name__)
 cors = CORS(app, resource={
     r"/*": {
@@ -23,11 +21,13 @@ cors = CORS(app, resource={
 })
 
 
-# Set up logging
 logging.basicConfig(level=logging.INFO)
 
 
-# Initialize Limiter
+def rate_limit_exceeded(e):
+    return jsonify({"error": "Too many requests"}), 409
+
+
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["10 per minute"],
@@ -35,10 +35,13 @@ limiter = Limiter(
 )
 
 
+app.config['RATELIMIT_HEADERS_ENABLED'] = True
+app.register_error_handler(429, rate_limit_exceeded)
+
+
 limiter.init_app(app)
 
 
-# MongoDB configuration function
 def get_db():
     client = MongoClient(MONGO_URI)
     db = client["test"]
@@ -46,8 +49,6 @@ def get_db():
 
 
 # Routes
-
-
 @app.route('/')
 @limiter.limit("10 per minute")
 def ping_server():
@@ -145,6 +146,6 @@ def delete_trainee(id):
         return jsonify({'message': 'Internal server error'}), 500
 
 
-# Run the Flask app
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
+
